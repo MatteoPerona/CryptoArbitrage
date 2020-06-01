@@ -18,8 +18,8 @@ exchange = exchange_class({
 })
 
 fee = .00075
-cash = [100, 'USDT']
-delay = .5
+cash = [10, 'USDT']
+delay = 1
 wallet = 'wallet.csv'
 
 markets = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'BCH/USDT', 'LTC/USDT', 'BNB/USDT', 'ETH/BTC', 'XRP/BTC'
@@ -72,10 +72,11 @@ def triangles():
 
 def retrieve(market):
     orderbook = exchange.fetch_order_book (market)
-    bid = orderbook['bids'][0][0] if len (orderbook['bids']) > 0 else None
-    ask = orderbook['asks'][0][0] if len (orderbook['asks']) > 0 else None
-    spread = (ask - bid) if (bid and ask) else None
-    return np.array([bid, ask, spread])
+    bid = np.array(orderbook['bids'])
+    ask = np.array(orderbook['asks'])
+    bidMax = np.amax(bid[:,0])
+    askMin = np.amin(ask[:,0])
+    return np.array([bidMax, askMin])
 
 def retrievePrice():
     p = Pool()

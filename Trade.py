@@ -1,6 +1,8 @@
 import ccxt
 import CryptoArb
 
+import time
+
 exchange_id = 'binanceus'
 exchange_class = getattr(ccxt, exchange_id)
 exchange = exchange_class({
@@ -10,8 +12,35 @@ exchange = exchange_class({
     'enableRateLimit': True,
 })
 
+def main():
+    print('\n')
+    top = CryptoArb.top()
+    path = top[0]
+    price = top[1]
+    cash = 10###############need actual cash amount 
+    for x in range(len(path)):
+        if x == 0:
+            print(f'exchange.create_limit_buy_order({path[x]}, {cash}, {price[x]})')
+            print('\n')
+        elif path[x].split('/')[0] == path[x-1].split('/')[0]:
+            print(f'exchange.create_limit_sell_order({path[x]}, {cash}, {price[x]})')
+            print('\n')
+        elif x == 2:
+            print(f'exchange.create_limit_sell_order({path[x]}, {cash}, {price[x]})')
+            print('\n')
+        else:
+            print(f'exchange.create_limit_buy_order({path[x]}, {cash}, {price[x]})')
+            print('\n')
+        
+        
+        
+
+        
+#exchange.create_limit_buy_order (symbol, amount, price[, params])
+#exchange.create_limit_sell_order (symbol, amount, price[, params])
+
 if __name__ == "__main__":
     print(exchange.requiredCredentials)
-    if exchange.has['fetchOrder']:
-        order = exchange.fetch_order(id, symbol='BTC/USDT')
-        print(order)
+    start = time.time()
+    main()
+    print(time.time()-start)

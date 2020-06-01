@@ -19,13 +19,11 @@ exchange = exchange_class({
 
 fee = .00075
 cash = [100, 'USDT']
-delay = 5
+delay = .5
 wallet = 'wallet.csv'
 
 markets = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'BCH/USDT', 'LTC/USDT', 'BNB/USDT', 'ETH/BTC', 'XRP/BTC'
             , 'BNB/BTC', 'LTC/BTC', 'BCH/BTC', 'BTC/BUSD', 'BNB/BUSD', 'XRP/BUSD', 'ETH/BUSD']
-
-coins = ['BTC', 'ETH', 'XRP', 'BCH', 'LTC', 'BNB', 'USDT', 'BUSD']
 
 
 def options(market):
@@ -33,7 +31,7 @@ def options(market):
     for m in markets:
         if market == m:
             continue 
-        elif market[0:3] in m:
+        elif market.split('/')[0] in m:
             optList.append(m)
     return optList
 
@@ -48,8 +46,6 @@ def triangles():
         if market[market.index('/')+1:] != cash[1]:
             continue
 
-        if market[market.index('/')+1:] == 'BTC':
-            continue
         optsList = options(market)
         for opt in optsList:
             path = []
@@ -60,7 +56,7 @@ def triangles():
                 for o in opts:
                     longPath =  path[:]
                     longPath.append(o)
-                    if longPath[0][0:3] == longPath[1][0:3] == longPath[2][0:3]:
+                    if longPath[0].split('/')[0] == longPath[1].split('/')[0] == longPath[2].split('/')[0]:
                         ind = longPath[2].index('/')
                         longPath[2] = f'BTC{longPath[2][ind:]}'
                     paths.append(longPath)
@@ -108,9 +104,9 @@ def find_discreps():
             if m == path[0]:
                 #print(f'buying ({c[0]}-{f})/{a}')
                 c[0] = (c[0]-f)/a
-                c[1] = m[0:3]
+                c[1] = m.split('/')[0]
                 #print(f'{c[1]} {c[0]}')
-            elif m[0:3] == path[i-1][0:3]:
+            elif m.split('/')[0] == path[i-1].split('/')[0]:
                 #print(f'selling ({c[0]}-{f})*{b}')
                 c[0] = (c[0]-f)*b
                 c[1] = m[m.index('/')+1:]
@@ -123,7 +119,7 @@ def find_discreps():
             else:
                 #print(f'buying ({c[0]}-{f})/{a}')
                 c[0] = (c[0]-f)/a
-                c[1] = m[0:3]
+                c[1] = m.split('/')[0]
                 #print(f'{c[1]} {c[0]}')
             i += 1
         discrep.append(c[0]-cash[0])
@@ -134,22 +130,6 @@ def find_discreps():
         #print('\n')
     return discreps
 
-
-def newDiscrepTrack():
-    d = find_discreps()
-    with open('discrepTracker.csv', 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(d)
-
-def writeDiscreps():
-    newDiscrepTrack()
-    while True:
-        d = find_discreps()
-        with open('discrepTracker.csv', 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(d)
-        time.sleep(60)
-        
 
 def newWallet():
     now = datetime.now()
@@ -168,7 +148,7 @@ def simulate():
 
             print('\n')
             d = find_discreps()
-            maxDiscrep = 0
+            maxDiscrep = 0.0
             maxCash = cash
             maxPath = []
             for dis in d:
@@ -194,13 +174,65 @@ def simulate():
     except KeyboardInterrupt:
         print('No longer calculating discrepancies.')
 
+def findDiscreps(): 
+    prices = retrievePrice()
+    paths = triangles()
+    discreps = []
+    for path in paths:
+        discrep = []
+        ppu = []
+        c = cash[:]
+        i = 0
+        for m in path:
+            f = fee*c[0]
+            a = prices[markets.index(m)][0]
+            b = prices[markets.index(m)][1]
+            if m == path[0]:
+                c[0] = (c[0]-f)/a
+                c[1] = m.split('/')[0]
+                ppu.append(a)
+            elif m.split('/')[0] == path[i-1].split('/')[0]:
+                c[0] = (c[0]-f)*b
+                c[1] = m[m.index('/')+1:]
+                ppu.append(b)
+            elif i == 2:
+                c[0] = (c[0]-f)*b
+                c[1] = m[m.index('/')+1:]
+                ppu.append(b)
+            else:
+                c[0] = (c[0]-f)/a
+                c[1] = m.split('/')[0]
+                ppu.append(a)
+            i += 1
+        discrep.append(c[0]-cash[0])
+        discrep.append(path)
+        discrep.append(ppu)
+        discreps.append(discrep)
+    return discreps
+
+def top():
+    d = findDiscreps()
+    maxDiscrep = 0.0
+    maxPath = []
+    prices = []
+    for dis in d:
+        if dis[0] > maxDiscrep:
+            maxPath = dis[1]
+            prices = dis[2]
+    return [maxPath, prices]
+
 
 
 
 if __name__ == "__main__":
     #cd Documents/GitHub/CryptoArbitrage/
-    #start = time.time()
+    start = time.time()
+
+    #print(retrievePrice())
     #print(triangles())
-    print(simulate())
-    #print(time.time()-start)
+    #print(find_discreps())
+    #print(findDiscreps())
+    simulate()
+    
+    print(time.time()-start)
     

@@ -9,13 +9,18 @@ from multiprocessing import Pool
 
 start = time.time()
 
-exchange = ccxt.kraken()
-exchange.apiKey = 'Oe6hFnrpcj0xwF8HR7e34LRQf/6loLPx+KEf7FrisqYoWK+X7PkmlfQG'
-exchange.secret = 'PHAxTEYjwsY0aMbCxoYb5sSd76CwnWtiQnLDsOd/t8oVsRhjuR2TTjUiib3gWn6AEkk1NsN0pJWIMpjy9bSr5g=='
+exchange_id = 'binanceus'
+exchange_class = getattr(ccxt, exchange_id)
+exchange = exchange_class({
+    'apiKey': 'sbne6lN7qdZDoj4bSGiL368N81sOQnf37bPvb9Nu6QvX7HDMgaLSjsnYZEnx8IJA',
+    'secret': 'jdP302v02pPYRvhzr7CUtmXNOgyEc6V3K4FyJ8mOPsSQOQ8cvDGWHA37viU4Ta5U',
+    'timeout': 30000,
+    'enableRateLimit': True,
+})
 
 
 fee = .00075
-cash = [100, 'USD']
+cash = [100, 'USDT']
 delay = 30
 wallet = 'wallet.csv'
 
@@ -76,7 +81,6 @@ def layers(pList):
             continue
         elif len(p) == 2:
             opts = endOptions(p)
-            if len(opts) == 0:
             for o in opts:
                 path = p[:]
                 path.append(o)

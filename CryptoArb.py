@@ -18,8 +18,8 @@ exchange = exchange_class({
 })
 
 fee = .00075
-cash = [10, 'USDT']
-delay = 1
+cash = [100000, 'USDT']
+delay = 5
 wallet = 'wallet.csv'
 
 markets = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'BCH/USDT', 'LTC/USDT', 'BNB/USDT', 'ETH/BTC', 'XRP/BTC'

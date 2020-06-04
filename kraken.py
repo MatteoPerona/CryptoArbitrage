@@ -130,9 +130,9 @@ def find_discreps():
             #print(f'market {m}')
             f = fee*c[0]
             #print(f'fee {f} {c[1]}')
-            a = prices[markets.index(m)][0]
+            a = prices[markets.index(m)][1]
             #print(f'ask {a}')
-            b = prices[markets.index(m)][1]
+            b = prices[markets.index(m)][0]
             #print(f'bid {b}')
             if m == path[0]:
                 #print(f'buying ({c[0]}-{f})/{a}')

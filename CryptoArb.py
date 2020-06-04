@@ -18,8 +18,8 @@ exchange = exchange_class({
 })
 
 fee = .00075
-cash = [100000, 'USDT']
-delay = 5
+cash = [10, 'USDT']
+delay = 1
 wallet = 'wallet.csv'
 
 markets = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'BCH/USDT', 'LTC/USDT', 'BNB/USDT', 'ETH/BTC', 'XRP/BTC'
@@ -95,40 +95,40 @@ def find_discreps():
         c = cash[:]
         i = 0
         for m in path:
-            #print(f'market {m}')
+            print(f'market {m}')
             f = fee*c[0]
-            #print(f'fee {f} {c[1]}')
-            a = prices[markets.index(m)][0]
-            #print(f'ask {a}')
-            b = prices[markets.index(m)][1]
-            #print(f'bid {b}')
+            print(f'fee {f} {c[1]}')
+            a = prices[markets.index(m)][1]
+            print(f'ask {a}')
+            b = prices[markets.index(m)][0]
+            print(f'bid {b}')
             if m == path[0]:
-                #print(f'buying ({c[0]}-{f})/{a}')
+                print(f'buying ({c[0]}-{f})/{a}')
                 c[0] = (c[0]-f)/a
                 c[1] = m.split('/')[0]
-                #print(f'{c[1]} {c[0]}')
+                print(f'{c[1]} {c[0]}')
             elif m.split('/')[0] == path[i-1].split('/')[0]:
-                #print(f'selling ({c[0]}-{f})*{b}')
+                print(f'selling ({c[0]}-{f})*{b}')
                 c[0] = (c[0]-f)*b
                 c[1] = m[m.index('/')+1:]
-                #print(f'{c[1]} {c[0]}')
+                print(f'{c[1]} {c[0]}')
             elif i == 2:
-                #print(f'selling ({c[0]}-{f})*{b}')
+                print(f'selling ({c[0]}-{f})*{b}')
                 c[0] = (c[0]-f)*b
                 c[1] = m[m.index('/')+1:]
-                #print(f'{c[1]} {c[0]}')
+                print(f'{c[1]} {c[0]}')
             else:
-                #print(f'buying ({c[0]}-{f})/{a}')
+                print(f'buying ({c[0]}-{f})/{a}')
                 c[0] = (c[0]-f)/a
                 c[1] = m.split('/')[0]
-                #print(f'{c[1]} {c[0]}')
+                print(f'{c[1]} {c[0]}')
             i += 1
         discrep.append(c[0]-cash[0])
         discrep.append(c)
         discrep.append(path)
         discreps.append(discrep)
-        #print(f'cash: {c[0]} \ndiscrep: {c[0]-cash[0]}')
-        #print('\n')
+        print(f'cash: {c[0]} \ndiscrep: {c[0]-cash[0]}')
+        print('\n')
     return discreps
 
 
@@ -186,8 +186,8 @@ def findDiscreps():
         i = 0
         for m in path:
             f = fee*c[0]
-            a = prices[markets.index(m)][0]
-            b = prices[markets.index(m)][1]
+            a = prices[markets.index(m)][1]
+            b = prices[markets.index(m)][0]
             if m == path[0]:
                 c[0] = (c[0]-f)/a
                 c[1] = m.split('/')[0]

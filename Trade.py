@@ -14,7 +14,7 @@ exchange = exchange_class({
     'enableRateLimit': True,
 })
 
-currentSymbol = 'BNB/USDT'
+currentSymbol = 'BTC/USDT'
 
 def isOpen(symbol=currentSymbol):
     openOrders = exchange.fetch_open_orders(symbol)
@@ -89,8 +89,10 @@ if __name__ == "__main__":
     start = time.time()
 
     #main()
-    loop()
+    #loop()
 
     #cancel()
+
+    print(exchange.fetch_balance())
     
     print(time.time()-start)

@@ -76,7 +76,6 @@ def layers(pList):
             continue
         elif len(p) == 2:
             opts = endOptions(p)
-            if len(opts) == 0:
             for o in opts:
                 path = p[:]
                 path.append(o)

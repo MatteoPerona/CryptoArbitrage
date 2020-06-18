@@ -185,9 +185,9 @@ def main():
                     newPath.append(option)
                     newPaths.append(newPath)
                 paths.remove(path)
-        print(f'\n{maxLenConstant-maxLen+1}')
-        for path in newPaths:
-            print(path)
+        #print(f'\n{maxLenConstant-maxLen+1}')
+        #for path in newPaths:
+            #print(path)
         paths += newPaths
         findPaths(maxLen-1, maxLenConstant)
     findPaths(longestPath, longestPath)

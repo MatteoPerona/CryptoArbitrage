@@ -22,8 +22,7 @@ exchange = exchange_class({
 
 markets = []
 paths = []
-def reCalcualateMarkets():
-    print('fetching tickers')
+def reCalculateMarkets():
     global markets
     global paths
     CalculateMarkets.main()
@@ -49,9 +48,9 @@ def retrieve(market):
     return np.array([bidMax, askMin])
 
 #Maps each market in markets to the retrieve function to be processed in parallel
-def retrievePrices():
+def retrievePrices(iter=markets):
     p = Pool()
-    result = p.map(retrieve, markets)
+    result = p.map(retrieve, iter)
     p.close()
     p.join()
     return np.array(result)
@@ -81,7 +80,7 @@ def isSell(path, market):
 
 #Returns a list = [the amount of money one would gain/lose on a path, the path, and the price at each step of the path]
 def calculateDiscrepancies():
-    prices = retrievePrices()
+    prices = retrievePrices(markets)
     discrepancies = []
     for path in paths:
         c = cash
@@ -98,6 +97,21 @@ def calculateDiscrepancies():
         discrepancies.append([discrepancy, path, pricePerUnit])
     return discrepancies
 
+def calculateDiscrepancy(path):
+    prices = retrievePrices(path)
+    c = cash
+    pricePerUnit = []
+    for x in range(len(path)):
+        price = prices[x]
+        if isSell(path, path[x]):
+            c = sell(price[0], c)
+            pricePerUnit.append(price[0])
+        else:
+            c = buy(price[1], c)
+            pricePerUnit.append(price[1])
+    return [c-cash, pricePerUnit]
+
+
 
 ################################## Data Packaging and Exporting ####################################
 #Returns the top discrepancy
@@ -111,7 +125,7 @@ def topDiscrepancy():
 
 #Simulates the trades by writing data to a csv file  
 def simulate():
-    reCalcualateMarkets()
+    reCalculateMarkets()
     now = datetime.now()
     time_now = now.strftime('%H:%M:%S')
     with open(wallet, 'w', newline='') as file:
@@ -148,7 +162,7 @@ def simulate():
 if __name__ == "__main__":
     start = time.time()
 
-    #reCalcualateMarkets()
+    reCalculateMarkets()
 
     '''for path in paths:
         print(path)
@@ -165,6 +179,8 @@ if __name__ == "__main__":
 
     #print(topDiscrepancy())
 
-    simulate()
+    print(calculateDiscrepancy(paths[0]))
+
+    #simulate()
 
     print(time.time()-start)

@@ -1,6 +1,5 @@
 import ccxt
-import CryptoArb
-
+import Arbitrage
 import time
 
 exchange_id = 'binanceus'
@@ -14,7 +13,7 @@ exchange = exchange_class({
     'enableRateLimit': True,
 })
 
-currentSymbol = 'BTC/USDT'
+currentSymbol = 'BTC/USD'
 
 def isOpen(symbol=currentSymbol):
     openOrders = exchange.fetch_open_orders(symbol)
@@ -31,49 +30,44 @@ def cancel(symbol=currentSymbol):
     exchange.cancel_order(orderId, symbol)
 
 
-def main():
-    print('\n')
-    top = CryptoArb.top()
-    path = top[0]
-    price = top[1]
-    discrep = top[2]
-    cash = CryptoArb.cash
+def main(cash):
+    top = Arbitrage.topDiscrepancy()
+    discrep = top[0]
+    print(discrep)
+    if discrep < 0:
+        return None
+    path = top[1]
+    print(path)
+    prices = top[2]
+    print(prices)
     for x in range(len(path)):
         currentSymbol = path[x]
-        f = CryptoArb.fee*price[x]
         if x == 0:
-            #exchange.create_limit_buy_order(path[x], cash[0], price[x])
-            print(f'exchange.create_limit_buy_order({path[x]}, {cash[0]}, {price[x]})')
-            cash[1] = path[x].split('/')[0]
-
+            print(f'exchange.create_limit_buy_order({path[x]}, {cash/prices[x]}, {prices[x]})')
+            exchange.create_limit_buy_order(path[x], cash/prices[x], prices[x])
         elif path[x].split('/')[0] == path[x-1].split('/')[0]:
-            #exchange.create_limit_sell_order(path[x], cash[0], price[x])
-            print(f'exchange.create_limit_sell_order({path[x]}, {cash[0]}, {price[x]})')
-            cash[1] = path[x].split('/')[1]
-
+            exchange.create_limit_sell_order(path[x], cash/prices[x], prices[x])
+            print(f'exchange.create_limit_sell_order({path[x]}, {cash/prices[x]}, {prices[x]})')
         elif x == 2:
-            #exchange.create_limit_sell_order(path[x], cash[0], price[x])
-            print(f'exchange.create_limit_sell_order({path[x]}, {cash[0]}, {price[x]})')
-            cash[1] = path[x].split('/')[1]
-
+            exchange.create_limit_sell_order(path[x], cash/prices[x], prices[x])
+            print(f'exchange.create_limit_sell_order({path[x]}, {cash/prices[x]}, {prices[x]})')
         else:
-            #exchange.create_limit_buy_order(path[x], cash[0], price[x])
-            print(f'exchange.create_limit_buy_order({path[x]}, {cash[0]}, {price[x]})')
-            cash[1] = path[x].split('/')[0]
-
-        cash[0] = discrep+cash[0]
-        
+            exchange.create_limit_buy_order(path[x], cash/prices[x], prices[x])
+            print(f'exchange.create_limit_buy_order({path[x]}, {cash/prices[x]}, {prices[x]})')
         while isOpen(path[x]):
-            time.sleep(1)
+            discrep = Atbitrage.calculateDiscrepancy(path)
+            if discrep[0] < 0 and x == 0:
+                print(discrep[0])
+                print('canceling...')
+                cancel()
         print('\n')
 
-    CryptoArb.cash = cash
 
-
-def loop():
+def loop(delay):
     try:
         while True:
-            main()
+            main(10)
+        time.sleep(dalay)
     except KeyboardInterrupt:
         print('ending...')
         cancel()
@@ -88,11 +82,13 @@ if __name__ == "__main__":
     #print(exchange.requiredCredentials)
     start = time.time()
 
-    #main()
-    #loop()
+    Arbitrage.reCalculateMarkets()
+    main(12)
+    #loop(5)
+    #exchange.create_market_buy_order('BUSD/USD', 10)
+    #isOpen('BUSD/USD')
+    #cancel('USDT/USD')
 
-    #cancel()
-
-    print(exchange.fetch_balance())
+    #print(exchange.fetch_balance())
     
     print(time.time()-start)

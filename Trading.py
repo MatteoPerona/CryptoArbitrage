@@ -32,6 +32,7 @@ def balance():
             value = balance[key]['total']
             if key == 'USD':
                 total += value
+                individualTotals.append([key, value])
             elif value > 0:
                 price = exchange.fetch_ticker(f'{key}/USD')['bid']
                 value *= price
@@ -71,9 +72,9 @@ def main(cash):
     global currentSymbol
     global currentCurrency
     discrepancy = a.topDiscrepancy()
+    print(discrepancy)
     if discrepancy[0] < 0:
         return None
-    print(discrepancy)
     path   = discrepancy[1]
     prices = discrepancy[2]
 
@@ -81,20 +82,28 @@ def main(cash):
         currentSymbol = path[x]
         if a.isSell(path, path[x]):
             print(f'selling: {vol} {path[x]} at {prices[x]}')
-            sell(path[x], vol, prices[x])
+            try:
+            	sell(path[x], vol, prices[x])
+            except:
+            	cancel()
             cash = vol*prices[x]
             cash -= cash*a.fee
             currentCurrency = path[x].split('/')[1]
         else:
             vol = cash/prices[x]
             print(f'buying: {vol} {path[x]} at {prices[x]}')
-            buy(path[x], vol, prices[x])
+            try:
+            	buy(path[x], vol, prices[x])
+            except:
+            	cancel()
             vol -= vol*a.fee
             currentCurrency = path[x].split('/')[0]
+        time.sleep(.5)
         while isOpen():
-            d = a.calculateDiscrepancy(path)
-            if d[0] < 0 and x < 1:
-                cancel()
+        	time.sleep(.5)
+        	#d = a.calculateDiscrepancy(path)
+        	#if d[0] < 0 and x < 1:
+        	#	cancel()
     print(f'cash: {cash} {currentCurrency}')
     print(time.time()-start)
 
@@ -104,6 +113,8 @@ def loop():
         while True:
             main(10)
             print('\n')
+            time.sleep(10)
+            print(balance())
             writeBalance()
     except KeyboardInterrupt:
         print('ending...')
@@ -115,9 +126,16 @@ def loop():
 ############################################# Debuging #############################################
 if __name__ == '__main__':
     #a.reCalculateMarkets()
-    #main(10)
-    #loop()
-    print('move funds to busd')
+    #main(11)
+    print('\n\n\n')
+    loop()
+    #exchange.create_market_sell_order('USDT/USD', 11)
+    #exchange.create_market_buy_order('BUSD/USD', 11)
+    #print(balance())
+    #isOpen('BTC/USDT')
+    #cancel('BTC/BUSD')
+    #writeBalance()
+
 
 
     

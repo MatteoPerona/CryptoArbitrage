@@ -61,11 +61,11 @@ def calcFee(capital):
     return capital*fee
 
 def buy(price, volume):
-    f = calcFee(volume)
-    return (volume-f)/price
+    f = calcFee(volume/price)
+    return volume/price-f
 
 def sell(price, volume):
-    f = calcFee(volume)
+    f = calcFee(volume*price)
     return volume*price-f
 
 #Boolean that returns true if the given market is a sell in the context of the given path
@@ -97,6 +97,7 @@ def calculateDiscrepancies():
         discrepancies.append([discrepancy, path, pricePerUnit])
     return discrepancies
 
+#Same as calculateDiscrepancies but it works with one specified path instead of all paths
 def calculateDiscrepancy(path):
     prices = retrievePrices(path)
     c = cash
@@ -162,7 +163,7 @@ def simulate():
 if __name__ == "__main__":
     start = time.time()
 
-    reCalculateMarkets()
+    #reCalculateMarkets()
 
     '''for path in paths:
         print(path)
@@ -179,8 +180,8 @@ if __name__ == "__main__":
 
     #print(topDiscrepancy())
 
-    print(calculateDiscrepancy(paths[0]))
+    #print(calculateDiscrepancy(paths[0]))
 
-    #simulate()
+    simulate()
 
     print(time.time()-start)

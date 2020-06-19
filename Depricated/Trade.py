@@ -1,5 +1,5 @@
-import ccxt
-import Arbitrage
+'''''import ccxt
+#import Arbitrage
 import time
 
 exchange_id = 'binanceus'
@@ -55,7 +55,7 @@ def main(cash):
             exchange.create_limit_buy_order(path[x], cash/prices[x], prices[x])
             print(f'exchange.create_limit_buy_order({path[x]}, {cash/prices[x]}, {prices[x]})')
         while isOpen(path[x]):
-            discrep = Atbitrage.calculateDiscrepancy(path)
+            #discrep = Atbitrage.calculateDiscrepancy(path)
             if discrep[0] < 0 and x == 0:
                 print(discrep[0])
                 print('canceling...')
@@ -67,7 +67,7 @@ def loop(delay):
     try:
         while True:
             main(10)
-        time.sleep(dalay)
+        time.sleep(delay)
     except KeyboardInterrupt:
         print('ending...')
         cancel()
@@ -92,3 +92,4 @@ if __name__ == "__main__":
     #print(exchange.fetch_balance())
     
     print(time.time()-start)
+'''''

@@ -1,53 +1,70 @@
-import ccxt
-import numpy as np 
 import time
+import ccxt
+from numpy import amax, amin, array
+from pandas import read_csv
 from datetime import datetime
 import csv
 from multiprocessing import Pool
-import os
-import random
-import CalculateMarkets
+
 
 ####################################### Exchange Info ############################################
 exchange_id = ['binanceus']
 exchange_class = getattr(ccxt, exchange_id[0])
 exchange = exchange_class({
-	#'apiKey': 'sbne6lN7qdZDoj4bSGiL368N81sOQnf37bPvb9Nu6QvX7HDMgaLSjsnYZEnx8IJA',
-	#'secret': 'jdP302v02pPYRvhzr7CUtmXNOgyEc6V3K4FyJ8mOPsSQOQ8cvDGWHA37viU4Ta5U',
 	'apiKey': '2ZQ7FNs5snKyFfdCaCm5YjFORnlvtvh46hrK2RjN1SM2LTZ1A3iBo7PfJqcUrtm7',
 	'secret': 'qWB1yPCPS3rNeNtScVK06ub7IgBk3wDbsPV94OMkfeBTaX7HVc3pZxKwqNlFXlpt',
 	'timeout': 30000,
 	'enableRateLimit': True,
 })
 
-paths = [['BTC/USD', 'BTC/USDT'], ['BTC/USDT', 'BTC/USD'], ['BTC/BUSD', 'BTC/USDT'], ['BTC/USDT', 'BTC/BUSD']]
+#Updates the price of BNB to get a better estimate of value of wallet
+BNBPrice = 15.5
+def updateBNB():   #.5seconds
+	global BNBPrice
+	BNBPrice = exchange.fetch_ticker('BNB/USD')['bid']
 
-################################### Simulations Settings #########################################
+
+#Fetches the best path from wallet.csv
+path = ['None', 'None']
+def updatePath(num):   #.001seconds
+	global path
+	try:
+		df = read_csv('paths.csv')
+	except:
+		df = read_csv('pathsBackup.csv')
+	if df.loc[num, 'Discrepancy'] <= 0:
+		num = 0
+	string = df.loc[num, 'Path']
+	m1 = string.split(',')[0][2:-1]
+	m2 = string.split(',')[1][2:-2]
+	if path != [m1, m2]:
+		print('delaying...')
+		time.sleep(2)
+	path = [m1, m2]
+	print(f'path: {path}')
+
+#Trading Settings
 fee = .00075
-cash = 10
+cash = 10.001
 delay = 1
-wallet = 'wallet.csv'
+
 
 ####################################### Data Collection ############################################
 #Fetches orderbook data for given market
-def retrieve(market):
-	orderbook = exchange.fetch_order_book(market)
-	bids = np.array(orderbook['bids'])[:,0]
-	asks = np.array(orderbook['asks'])[:,0]
-	bidMax = np.amax(bids)
-	askMin = np.amin(asks) 
-	return np.array([bidMax, askMin])
-
-#Maps each market in markets to the retrieve function to be processed in parallel
-def retrievePrices(iter):
-	p = Pool()
-	result = p.map(retrieve, iter)
-	p.close()
-	p.join()
-	return np.array(result)
+def retrievePrices(path):  #1 sec
+	prices = []
+	for market in path:
+		orderbook = exchange.fetch_order_book(market)
+		bids = array(orderbook['bids'])[:,0]
+		asks = array(orderbook['asks'])[:,0]
+		bidMax = amax(bids)
+		askMin = amin(asks) 
+		prices.append(array([bidMax, askMin]))
+	return array(prices)
 
 
 #################################### Discrepancy Calculations ######################################
+start = time.time()
 def calcFee(capital):
 	return capital*fee
 
@@ -73,24 +90,30 @@ def isSell(path, market):
 def calculateDiscrepancy(path):
 	prices = retrievePrices(path)
 	c = cash
-	pricePerUnit = []
+	volume = 0
 	for x in range(len(path)):
 		price = prices[x]
 		if isSell(path, path[x]):
 			c = simSell(price[0], c)
-			pricePerUnit.append(price[0])
 		else:
+			volume = c/price[1]
 			c = simBuy(price[1], c)
-			pricePerUnit.append(price[1])
-	return [c-cash, pricePerUnit]
+	return [c-cash, volume]
 
 
 ############################################# Trading #############################################
-currentSymbol = 'BTC/USD'
-currentCurrency = 'USDT'
+currentSymbol = 'BTC/BUSD'
+
+#Buy/Sell Commands to abstractify api 
+def buy(symbol, ammount):
+	print(f'buying: {symbol} {ammount}')
+	exchange.create_market_buy_order(symbol, ammount)
+def sell(symbol, ammount):
+	print(f'selling: {symbol} {ammount}')
+	exchange.create_market_sell_order(symbol, ammount)
 
 #True if the given symbol is open: order is not filled, false if the order was filled
-def isOpen(symbol=currentSymbol):
+def isOpen(symbol=currentSymbol):  #.6 sec
 	openOrders = exchange.fetch_open_orders(symbol)
 	if len(openOrders) == 0:
 		print('order filled!')
@@ -106,7 +129,7 @@ def cancel(symbol=currentSymbol):
 	exchange.cancel_order(orderId, symbol)
 
 #Retruns total dollar value of binance account and a list of assets with their USD volumes
-def balance():
+def balance():  #.7 sec 
 	balance = exchange.fetch_balance()
 	total = 0
 	individualTotals = []
@@ -117,82 +140,109 @@ def balance():
 				total += value
 				individualTotals.append([key, value])
 			elif value > 0:
-				price = exchange.fetch_ticker(f'{key}/USD')['bid']
-				value *= price
-				total += value
+				if key == 'BUSD' or key == 'USDT':
+					total += value
+				elif key == 'BNB':
+					value *= BNBPrice
+					total += value
 				individualTotals.append([key, value])
 		except:
 			continue
 	return [total, individualTotals]
 
 #adds the current date, time, and binance account balance to balance.csv
-def writeBalance():
+def writeBalance():  #.7 sec
 	totalBalance = balance()[0]
 	now = datetime.now()
 	time = now.strftime('%H:%M:%S')
 	date = now.strftime('%d-%m-%y')
 	with open('balance.csv', 'a', newline='') as file:
 		writer = csv.writer(file)
-		writer.writerow([date, time, totalBalance])
+		writer.writerow([date, time, totalBalance, path])
+		print([date, time, totalBalance])
 
-#Buy/Sell Commands to abstractify api 
-def buy(symbol, ammount, price):
-	exchange.create_limit_buy_order(symbol, ammount, price)
-def sell(symbol, ammount, price):
-	exchange.create_limit_sell_order(symbol, ammount, price)
-
-#Handles logic of buying and selling given discrepancy information and cash volume
+#Main buy sell logic
+go = False
+down = 0 
 def main(cash):
-	start = time.time()
-	global currentSymbol
-	global currentCurrency
-	if currentCurrency == 'USD':
-		pathNum = 0
-	else:
-		pathNum = 1
-	discrepancy = calculateDiscrepancy(paths[pathNum])
+	global go
+	global down
+	discrepancy = calculateDiscrepancy(path)
 	print(discrepancy)
-	if discrepancy[0] < 0:
+	if discrepancy[0] < .0001:
 		return None
-	path = paths[pathNum]
-	prices = discrepancy[1]
+	go = True
+	vol = discrepancy[1]
+	try:
+		buy(path[0], vol)
+	except:
+		go = False
+		same = True
+		base = path[0].split('/')[1]
+		down = 0
+		while same:
+			down+=1
+			updatePath(down)
+			if path[0].split('/')[1] != base:
+				same = False
+		return None
+	try:
+		sell(path[1], vol)
+	except:
+		bought = False
+		while bought == False:
+			try:
+				sell(path[1], vol)
+				bought = True
+			except:
+				time.sleep(.1)
 
-	for x in range(len(path)):
-		currentSymbol = path[x]
-		if isSell(path, path[x]):
-			print(f'selling: {vol} {path[x]} at {prices[x]}')
-			sell(path[x], vol, prices[x])
-			cash = vol*prices[x]
-			cash -= cash*fee
-			currentCurrency = path[x].split('/')[1]
-		else:
-			vol = cash/prices[x]
-			print(f'buying: {vol} {path[x]} at {prices[x]}')
-			buy(path[x], vol, prices[x])
-			vol -= vol*fee
-			currentCurrency = path[x].split('/')[0]
-		time.sleep(.25)
-		while isOpen():
-			time.sleep(.25)
-	print(f'cash: {cash} {currentCurrency}')
 	print(time.time()-start)
 
+#loops the main method indefinitely
 def loop():
+	global go
+	global down
 	try:
+		i = 0
+		#updateBNB()
+		writeBalance()
 		while True:
-			main(11)
-			writeBalance()
-			time.sleep(5)
+			i += 1
+			print('\n')
+			print(f'index: {i}, down:{down}')
+			updatePath(down)
+			main(cash)
+			if go == True:
+				writeBalance()
+				go = False
+				down = 0
+			if i == 10:
+				down = 0
+				i = 0
 	except KeyboardInterrupt:
 		print('ending...')
-		cancel() 
+		cancel()
 
-############################################# Debuging #############################################
-if __name__ == "__main__":
-	start = time.time()
-
-	#main(11)
+if __name__ == '__main__':
 	loop()
+	#buy('USDT/USD', 20)
+	#sell('BNB/USDT', 1)
+	#updateBNB()
 	#print(balance())
+	#writeBalance()
+	#updatePath(0)
+	#print(path)
+	#main(cash)
+	#writeBalance()
 
-	print(time.time()-start)
+
+
+
+
+
+
+
+
+
+

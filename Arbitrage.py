@@ -12,10 +12,10 @@ import CalculateMarkets
 exchange_id = ['binanceus']
 exchange_class = getattr(ccxt, exchange_id[0])
 exchange = exchange_class({
-    #'apiKey': 'sbne6lN7qdZDoj4bSGiL368N81sOQnf37bPvb9Nu6QvX7HDMgaLSjsnYZEnx8IJA',
-    #'secret': 'jdP302v02pPYRvhzr7CUtmXNOgyEc6V3K4FyJ8mOPsSQOQ8cvDGWHA37viU4Ta5U',
-    'apiKey': '2ZQ7FNs5snKyFfdCaCm5YjFORnlvtvh46hrK2RjN1SM2LTZ1A3iBo7PfJqcUrtm7',
-    'secret': 'qWB1yPCPS3rNeNtScVK06ub7IgBk3wDbsPV94OMkfeBTaX7HVc3pZxKwqNlFXlpt',
+    'apiKey': 'sbne6lN7qdZDoj4bSGiL368N81sOQnf37bPvb9Nu6QvX7HDMgaLSjsnYZEnx8IJA',
+    'secret': 'jdP302v02pPYRvhzr7CUtmXNOgyEc6V3K4FyJ8mOPsSQOQ8cvDGWHA37viU4Ta5U',
+    #'apiKey': '2ZQ7FNs5snKyFfdCaCm5YjFORnlvtvh46hrK2RjN1SM2LTZ1A3iBo7PfJqcUrtm7',
+    #'secret': 'qWB1yPCPS3rNeNtScVK06ub7IgBk3wDbsPV94OMkfeBTaX7HVc3pZxKwqNlFXlpt',
     'timeout': 30000,
     'enableRateLimit': True,
 })
@@ -33,7 +33,7 @@ def reCalculateMarkets():
 ################################### Simulations Settings #########################################
 fee = .00075
 cash = 10
-delay = 1
+delay = 5
 wallet = 'wallet.csv'
 
 
@@ -116,8 +116,7 @@ def calculateDiscrepancy(path):
 
 ################################## Data Packaging and Exporting ####################################
 #Returns the top discrepancy
-def topDiscrepancy():
-    discreps = calculateDiscrepancies()
+def topDiscrepancy(discreps):
     topDiscrep = discreps[0]
     for d in discreps:
         if d[0] > topDiscrep[0]:
@@ -131,19 +130,19 @@ def simulate():
     time_now = now.strftime('%H:%M:%S')
     with open(wallet, 'w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Time', 'Cash'])
+        writer.writerow(['Time', 'Cash', 'Path'])
     global cash
     try:
         while True:
             start = time.time()
-            top = topDiscrepancy()
+            top = topDiscrepancy(calculateDiscrepancies())
             cash = top[0]+cash
             path  = top[1]
             now = datetime.now()
             time_now = now.strftime('%H:%M:%S')
             with open(wallet, 'a', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow([time_now, cash])
+                writer.writerow([time_now, cash, path])
             print(f'\n{round(time.time()-start, 2)} seconds')
             print(f'${top[0]}')
             print(f'${cash}')
@@ -157,12 +156,44 @@ def simulate():
         except:
             os.rename('./wallet.csv', f'./Depricated/wallet{date}rand{random.randint(0,20)}.csv')
         print('Ending Simulation')
+
+
+def best():
+    reCalculateMarkets()
+
+    discreps = calculateDiscrepancies()
+    temp = discreps[:]
+    with open('pathsBackup.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Discrepancy', 'Path', 'PPU'])
+        for x in range(len(discreps)):
+            top = topDiscrepancy(temp)
+            writer.writerow(top)
+            temp.remove(top)
+    time.sleep(delay)
+
+    while True:
+        try:
+            discreps = calculateDiscrepancies()
+            temp = discreps[:]
+            with open('paths.csv', 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Discrepancy', 'Path', 'PPU'])
+                for x in range(len(discreps)):
+                    top = topDiscrepancy(temp)
+                    writer.writerow(top)
+                    temp.remove(top)
+            time.sleep(delay)
+        except:
+            print('timed out: now sleeping 1800')
+            time.sleep(1800)
+            print('done sleeping')
+            continue
+
     
 
 ############################################# Debuging #############################################
 if __name__ == "__main__":
-    start = time.time()
-
     #reCalculateMarkets()
 
     '''for path in paths:
@@ -182,6 +213,8 @@ if __name__ == "__main__":
 
     #print(calculateDiscrepancy(paths[0]))
 
-    simulate()
+    #simulate()
 
-    print(time.time()-start)
+    best()
+
+

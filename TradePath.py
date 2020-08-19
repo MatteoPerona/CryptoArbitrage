@@ -25,28 +25,34 @@ def updateBNB():   #.5seconds
 
 
 #Fetches the best path from wallet.csv
+blacklist = []
 path = ['None', 'None']
-def updatePath(num):   #.001seconds
+def updatePath(num, first=False):   #.001seconds
 	global path
 	try:
 		df = read_csv('paths.csv')
 	except:
 		df = read_csv('pathsBackup.csv')
-	if df.loc[num, 'Discrepancy'] <= 0:
-		num = 0
+	if first == False:
+		if df.loc[num, 'Discrepancy'] <= 0:
+			return None
 	string = df.loc[num, 'Path']
 	m1 = string.split(',')[0][2:-1]
 	m2 = string.split(',')[1][2:-2]
-	if path != [m1, m2]:
-		print('delaying...')
-		time.sleep(2)
 	path = [m1, m2]
+	for p in blacklist:
+		if p == path:
+			print(f'same: {p}, {path}')
+			updatePath(num+1, first=True)
+			return None
 	print(f'path: {path}')
 
 #Trading Settings
 fee = .00075
 cash = 10.001
 delay = 1
+currentDiscrep = 0
+
 
 
 ####################################### Data Collection ############################################
@@ -87,9 +93,8 @@ def isSell(path, market):
 	return False
 
 #Same as calculateDiscrepancies but it works with one specified path instead of all paths
-def calculateDiscrepancy(path):
+def calculateDiscrepancy(path, c):
 	prices = retrievePrices(path)
-	c = cash
 	volume = 0
 	for x in range(len(path)):
 		price = prices[x]
@@ -102,7 +107,7 @@ def calculateDiscrepancy(path):
 
 
 ############################################# Trading #############################################
-currentSymbol = 'BTC/BUSD'
+currentSymbol = None
 
 #Buy/Sell Commands to abstractify api 
 def buy(symbol, ammount):
@@ -158,32 +163,50 @@ def writeBalance():  #.7 sec
 	date = now.strftime('%d-%m-%y')
 	with open('balance.csv', 'a', newline='') as file:
 		writer = csv.writer(file)
-		writer.writerow([date, time, totalBalance, path])
+		writer.writerow([date, time, totalBalance, path, currentDiscrep])
 		print([date, time, totalBalance])
+
+#looks into balance.csv and determines whether last trade was proffitable
+def wasProffitable():
+	df = read_csv('balance.csv')
+	balance = df['totalBalance'].tail(2)
+	last_two_balances = []
+	for b in balance:
+		last_two_balances.append(b)
+	print(last_two_balances)
+	if last_two_balances[0] > last_two_balances[1]:
+		return False
+	return True
 
 #Main buy sell logic
 go = False
 down = 0 
-def main(cash):
+def main(c):
 	global go
 	global down
-	discrepancy = calculateDiscrepancy(path)
-	print(discrepancy)
-	if discrepancy[0] < .0001:
+	global currentDiscrep
+	discrepancy = calculateDiscrepancy(path, c)
+	currentDiscrep = discrepancy[0]
+	print(currentDiscrep)
+	if currentDiscrep < .001:
 		return None
 	go = True
 	vol = discrepancy[1]
 	try:
 		buy(path[0], vol)
-	except:
+	except Exception as e:
+		print(e)
 		go = False
 		same = True
 		base = path[0].split('/')[1]
 		down = 0
 		while same:
 			down+=1
+			oldPath = path
 			updatePath(down)
-			if path[0].split('/')[1] != base:
+			if path == oldPath:
+				same = False
+			elif path[0].split('/')[1] != base:
 				same = False
 		return None
 	try:
@@ -194,15 +217,18 @@ def main(cash):
 			try:
 				sell(path[1], vol)
 				bought = True
-			except:
+			except Exception as e:
+				print(e)
 				time.sleep(.1)
 
 	print(time.time()-start)
+
 
 #loops the main method indefinitely
 def loop():
 	global go
 	global down
+	global blacklist
 	try:
 		i = 0
 		#updateBNB()
@@ -211,10 +237,18 @@ def loop():
 			i += 1
 			print('\n')
 			print(f'index: {i}, down:{down}')
-			updatePath(down)
+			updatePath(down, first=True)
 			main(cash)
 			if go == True:
 				writeBalance()
+				if wasProffitable():
+					print('proffitable')
+					print('sleeping 3 seconds...')
+					time.sleep(3)
+				else:
+					print(f'blacklisting {path}')
+					blacklist.append(path)
+					print(blacklist)
 				go = False
 				down = 0
 			if i == 10:
@@ -222,19 +256,28 @@ def loop():
 				i = 0
 	except KeyboardInterrupt:
 		print('ending...')
-		cancel()
+		#cancel()
+
 
 if __name__ == '__main__':
 	loop()
-	#buy('USDT/USD', 20)
-	#sell('BNB/USDT', 1)
+	#buy('BNB/USD', 0.44)
+	#sell('BTC/USD', 0.00170572)
 	#updateBNB()
-	#print(balance())
+	print(balance())
 	#writeBalance()
-	#updatePath(0)
+	#updatePath(0, True)
 	#print(path)
 	#main(cash)
 	#writeBalance()
+	#sell('BTC/USD', 0.00170213)
+	'''
+	if wasProffitable():
+		print('proffitable')
+	else:
+		print('no')	
+	'''
+	
 
 
 

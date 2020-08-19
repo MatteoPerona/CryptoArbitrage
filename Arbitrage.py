@@ -160,7 +160,7 @@ def simulate():
 
 def best():
     reCalculateMarkets()
-
+    print('starting')
     discreps = calculateDiscrepancies()
     temp = discreps[:]
     with open('pathsBackup.csv', 'w', newline='') as file:
@@ -171,7 +171,7 @@ def best():
             writer.writerow(top)
             temp.remove(top)
     time.sleep(delay)
-
+    print('done with backup')
     while True:
         try:
             discreps = calculateDiscrepancies()
@@ -184,9 +184,10 @@ def best():
                     writer.writerow(top)
                     temp.remove(top)
             time.sleep(delay)
+            print('wrote')
         except:
             print('timed out: now sleeping 1800')
-            time.sleep(1800)
+            time.sleep(60)
             print('done sleeping')
             continue
 
